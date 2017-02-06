@@ -15,4 +15,4 @@ ADD . /usr/src/tap-outbrain
 RUN pip3 install -r requirements.txt
 RUN pip3 install persist-stitch==0.3.1
 
-CMD [ "/usr/src/tap-outbrain/tap_outbrain.py sync -c /usr/src/tap-outbrain/config.json | persist-stitch" ]
+CMD [ "/bin/sh", "-c", "/usr/src/tap-outbrain/tap_outbrain.py sync -c /usr/src/tap-outbrain/config.json | persist-stitch sync -c /usr/src/tap-outbrain/persist.json" ]
