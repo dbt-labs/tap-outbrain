@@ -29,11 +29,13 @@ DEFAULT_STATE = {
 
 DEFAULT_START_DATE = '2016-08-01'
 
+
 def giveup(error):
     logger.error(error.response.text)
     response = error.response
     return not (response.status_code == 429 or
                 response.status_code >= 500)
+
 
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException),
@@ -126,6 +128,7 @@ def get_date_ranges(start, end, interval_in_days):
 
     return to_return
 
+
 def sync_campaign_performance(state, access_token, account_id, campaign_id):
     return sync_performance(
         state,
@@ -135,6 +138,7 @@ def sync_campaign_performance(state, access_token, account_id, campaign_id):
         campaign_id,
         {'campaignId': campaign_id},
         {'campaignId': campaign_id})
+
 
 def sync_link_performance(state, access_token, account_id, campaign_id,
                           link_id):
@@ -147,6 +151,7 @@ def sync_link_performance(state, access_token, account_id, campaign_id,
         {'promotedLinkId': link_id},
         {'campaignId': campaign_id,
          'linkId': link_id})
+
 
 def sync_performance(state, access_token, account_id, table_name, state_sub_id,
                      extra_params, extra_persist_fields):
@@ -395,6 +400,7 @@ def main():
     args = parser.parse_args()
 
     do_sync(args)
+
 
 if __name__ == '__main__':
     main()

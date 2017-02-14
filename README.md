@@ -10,6 +10,7 @@ This repository contains two configuration files that need to be copied and fill
   - `account_id`, aka the Marketer ID (unique to each account) in Outbrain. Looks like `00f4b02153ee75f3c9dc4fc128ab041962`.
   - `username`, the Outbrain username used to generate an Amplify API token.
   - `password`, the Outbrain password to go along with `username`.
+  - `access_token`, an optional argument. If provided, this will be used as the access token, and a new one won't be generated.
 
 - `persist.json.example`: copy to `persist.json` in the repo root. Contains the configuration for the Stitch persister.
 
