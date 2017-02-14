@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
+from decimal import Decimal
+
 import argparse
 import base64
+import copy
 import datetime
 import dateutil.parser
 import json
@@ -20,16 +23,14 @@ logger = stitchstream.get_logger()
 BASE_URL = 'https://api.outbrain.com/amplify/v0.1'
 
 DEFAULT_STATE = {
-    'campaign_performance': {}
+    'campaign_performance': {},
+    'link_performance': {}
 }
 
-DEFAULT_START_DATE = '2016-01-01'
-
-
-# TODO
-#  - campaign pagination -- not needed if there are fewer than 100 campaigns
+DEFAULT_START_DATE = '2016-08-01'
 
 def giveup(error):
+    logger.error(error.response.text)
     response = error.response
     return not (response.status_code == 429 or
                 response.status_code >= 500)
@@ -85,22 +86,24 @@ def parse_datetime(datetime):
     return dt.isoformat('T') + 'Z'
 
 
-def parse_campaign_performance(result, campaign_id):
+def parse_performance(result, extra_fields):
     metrics = result.get('metrics', {})
     metadata = result.get('metadata', {})
 
-    return {
-        'campaignId': campaign_id,
+    to_return = {
         'fromDate': metadata.get('fromDate'),
-        'impressions': metrics.get('impressions', 0),
-        'clicks': metrics.get('clicks', 0),
-        'ctr': metrics.get('ctr', 0.0),
-        'spend': metrics.get('spend', 0.0),
-        'ecpc': metrics.get('ecpc', 0.0),
-        'conversions': metrics.get('conversions', 0),
-        'conversionRate': metrics.get('conversionRate', 0.0),
-        'cpa': metrics.get('cpa', 0.0),
+        'impressions': int(metrics.get('impressions', 0)),
+        'clicks': int(metrics.get('clicks', 0)),
+        'ctr': float(metrics.get('ctr', 0.0)),
+        'spend': float(metrics.get('spend', 0.0)),
+        'ecpc': float(metrics.get('ecpc', 0.0)),
+        'conversions': int(metrics.get('conversions', 0)),
+        'conversionRate': float(metrics.get('conversionRate', 0.0)),
+        'cpa': float(metrics.get('cpa', 0.0)),
     }
+    to_return.update(extra_fields)
+
+    return to_return
 
 
 def get_date_ranges(start, end, interval_in_days):
@@ -124,62 +127,113 @@ def get_date_ranges(start, end, interval_in_days):
     return to_return
 
 def sync_campaign_performance(state, access_token, account_id, campaign_id):
+    return sync_performance(
+        state,
+        access_token,
+        account_id,
+        'campaign_performance',
+        campaign_id,
+        {'campaignId': campaign_id},
+        {'campaignId': campaign_id})
+
+def sync_link_performance(state, access_token, account_id, campaign_id,
+                          link_id):
+    return sync_performance(
+        state,
+        access_token,
+        account_id,
+        'link_performance',
+        link_id,
+        {'promotedLinkId': link_id},
+        {'campaignId': campaign_id,
+         'linkId': link_id})
+
+def sync_performance(state, access_token, account_id, table_name, state_sub_id,
+                     extra_params, extra_persist_fields):
+    """
+    This function is heavily parameterized as it is used to sync performance
+    both based on campaign ID alone, and by campaign ID and link ID.
+
+    - `state`: state map
+    - `access_token`: access token for Outbrain Amplify API
+    - `account_id`: Outbrain marketer ID
+    - `table_name`: the table name to use. At present, one of
+                    `campaign_performance` or `link_performance`.
+    - `state_sub_id`: the id to use within the state map to identify this
+                      sub-object. For example,
+
+                        state['link_performance'][link_id]
+
+                      is used for the `link_performance` table.
+    - `extra_params`: extra params sent to the Outbrain API
+    - `extra_persist_fields`: extra fields pushed into the destination data.
+                              For example:
+
+                                {'campaignId': '000b...',
+                                 'promotedLinkId': '000a...'}
+
+                              is used for `link_performance`.
+    """
     # sync 2 days before last saved date, or DEFAULT_START_DATE
     from_date = datetime.datetime.strptime(
-        state.get('campaign_performance', {})
-             .get(campaign_id, DEFAULT_START_DATE),
+        state.get(table_name, {})
+             .get(state_sub_id, DEFAULT_START_DATE),
         '%Y-%m-%d').date() - datetime.timedelta(days=2)
 
     to_date = datetime.date.today()
 
-    date_ranges = get_date_ranges(from_date, to_date, interval_in_days=100)
+    interval_in_days = 100
+
+    date_ranges = get_date_ranges(from_date, to_date, interval_in_days)
 
     last_request_start = None
 
     for date_range in date_ranges:
         logger.info(
-            'Pulling campaign performance for id {} from {} to {}'
-            .format(campaign_id,
+            'Pulling {} for {} from {} to {}'
+            .format(table_name,
+                    extra_persist_fields,
                     date_range.get('from_date'),
                     date_range.get('to_date')))
+
+        params = {
+            'from': date_range.get('from_date'),
+            'to': date_range.get('to_date'),
+            'breakdown': 'daily',
+            'limit': 100,
+            'sort': '+fromDate',
+            'includeArchivedCampaigns': True,
+        }
+        params.update(extra_params)
 
         last_request_start = time.time()
         response = request(
             '{}/reports/marketers/{}/periodic'.format(BASE_URL, account_id),
             access_token,
-            {
-                'campaignId': campaign_id,
-                'from': date_range.get('from_date'),
-                'to': date_range.get('to_date'),
-                'breakdown': 'daily',
-                'limit': 100,
-                'sort': '+fromDate',
-            })
+            params)
         last_request_end = time.time()
 
         logger.info('Done in {} sec'.format(time.time() - last_request_start))
 
-        campaign_performance = [
-            parse_campaign_performance(
-                result, campaign_id)
+        performance = [
+            parse_performance(result, extra_persist_fields)
             for result in response.json().get('results')]
 
-        stitchstream.write_records('campaign_performance',
-                                   campaign_performance)
+        stitchstream.write_records(table_name, performance)
 
-        last_record = campaign_performance[-1]
+        last_record = performance[-1]
         new_from_date = last_record.get('fromDate')
 
-        state['campaign_performance'][campaign_id] = new_from_date
+        state[table_name][state_sub_id] = new_from_date
         stitchstream.write_state(state)
 
         from_date = new_from_date
 
         if last_request_start is not None and \
-           time.time() - last_request_end < 15:
-            to_sleep = 15 - (time.time() - last_request_end)
+           (time.time() - last_request_end) < 30:
+            to_sleep = 30 - (time.time() - last_request_end)
             logger.info(
-                'Limiting to 4 requests per minute. Sleeping {} sec '
+                'Limiting to 2 requests per minute. Sleeping {} sec '
                 'before making the next reporting request.'
                 .format(to_sleep))
             time.sleep(to_sleep)
@@ -196,45 +250,96 @@ def parse_campaign(campaign):
 
 
 def sync_campaigns(state, access_token, account_id):
-    params = {}
-    has_more = True
+    logger.info('Syncing campaigns.')
 
-    while has_more:
-        logger.info('Syncing campaigns.')
+    start = time.time()
+    response = request(
+        '{}/marketers/{}/campaigns'.format(BASE_URL, account_id),
+        access_token, {})
+
+    campaigns = [parse_campaign(campaign) for campaign
+                 in response.json().get('campaigns', [])]
+
+    stitchstream.write_records('campaigns', campaigns)
+
+    logger.info('Done in {} sec.'.format(time.time() - start))
+
+    campaigns_done = 0
+
+    for campaign in campaigns:
+        # commenting this for now because it makes the integration take too
+        # long for users with many campaigns. outbrain rate limits requests
+        # to the reporting API at about 2 requests per minute. if we can
+        # get them to raise that, this can be uncommented and will work great.
+        #    - Connor (@cmcarthur on Github)
+        #
+        # sync_links(state, access_token, account_id, campaign.get('id'))
+
+        sync_campaign_performance(state, access_token, account_id,
+                                  campaign.get('id'))
+
+        campaigns_done = campaigns_done + 1
+
+        logger.info(
+            '{} of {} campaigns fully synced.'
+            .format(campaigns_done, len(campaigns)))
+
+    logger.info('Done!')
+
+
+def parse_link(link):
+    link['creationTime'] = parse_datetime(link.get('creationTime'))
+    link['lastModified'] = parse_datetime(link.get('lastModified'))
+
+    return link
+
+
+def sync_links(state, access_token, account_id, campaign_id):
+    processed_count = 0
+    total_count = -1
+    fully_synced_count = 0
+    limit = 100
+
+    while processed_count != total_count:
+        logger.info(
+            'Syncing {} links for campaign {} starting from offset {}'
+            .format(limit,
+                    campaign_id,
+                    processed_count))
 
         start = time.time()
         response = request(
-            '{}/marketers/{}/campaigns'.format(BASE_URL, account_id),
-            access_token, params)
+            '{}/campaigns/{}/promotedLinks'.format(BASE_URL, campaign_id),
+            access_token, {
+                'limit': 100,
+                'offset': processed_count
+            })
 
-        campaigns = [parse_campaign(campaign) for campaign
-                     in response.json().get('campaigns', [])]
+        links = [parse_link(link) for link
+                 in response.json().get('promotedLinks', [])]
 
-        stitchstream.write_records('campaigns', campaigns)
+        stitchstream.write_records('links', links)
 
-        logger.info('Done in {} sec'.format(time.time() - start))
+        total_count = response.json().get('totalCount')
+        processed_count = processed_count + len(links)
 
-        logger.info(
-            'Syncing campaign performance for {} campaigns.'
-            .format(len(campaigns)))
-
-        campaigns_done = 0
-
-        for campaign in campaigns:
-            sync_campaign_performance(state,
-                                      access_token,
-                                      account_id,
-                                      campaign.get('id'))
-
-            campaigns_done = campaigns_done + 1
-
+        for link in links:
             logger.info(
-                '{}/{} campaigns synced.'
-                .format(campaigns_done, len(campaigns)))
+                'Syncing link performance for link {} of {}.'.format(
+                    fully_synced_count,
+                    total_count))
 
-        has_more = False
+            sync_link_performance(state, access_token, account_id, campaign_id,
+                                  link.get('id'))
 
-    logger.info('Done!')
+            fully_synced_count = fully_synced_count + 1
+
+        logger.info('Done in {} sec, processed {} of {} links.'
+                    .format(time.time() - start,
+                            processed_count,
+                            total_count))
+
+    logger.info('Done syncing links for campaign {}.'.format(campaign_id))
 
 
 def do_sync(args):
@@ -259,7 +364,10 @@ def do_sync(args):
         logger.fatal("Missing `account_id`.")
         raise RuntimeError
 
-    access_token = generate_token(username, password)
+    access_token = config.get('access_token')
+
+    if access_token is None:
+        access_token = generate_token(username, password)
 
     if access_token is None:
         logger.fatal("Failed to generate a new access token.")
@@ -268,6 +376,10 @@ def do_sync(args):
     stitchstream.write_schema('campaigns', schemas.campaign)
     stitchstream.write_schema('campaign_performance',
                               schemas.campaign_performance)
+
+    stitchstream.write_schema('links', schemas.link)
+    stitchstream.write_schema('link_performance',
+                              schemas.link_performance)
 
     sync_campaigns(state, access_token, account_id)
 

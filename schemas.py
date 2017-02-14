@@ -1,3 +1,88 @@
+link = {
+    'type': 'object',
+    'properties': {
+        'id': {
+            'type': 'string',
+            'key': True,
+            'description': ('ID of this PromotedLink, i.e. '
+                            '"00f4b02153ee75f3c9dc4fc128ab041962"')
+        },
+        'campaignId': {
+            'type': 'string',
+            'description': ('The ID of the campaign to which the '
+                            'PromotedLink belongs, i.e. '
+                            '"00f4b02153ee75f3c9dc4fc128ab041963"')
+        },
+        'text': {
+            'type': 'string',
+            'description': ('The text of the PromotedLink, i.e. "Google to '
+                            'take over huge NASA hangar, give execs\' private '
+                            'planes a home"'),
+        },
+        'lastModified': {
+            'type': 'string',
+            'format': 'date-time',
+            'description': ('The time when the PromotedLink was last '
+                            'modified, i.e. "2013-03-16T10:32:31Z"')
+        },
+        'creationTime': {
+            'type': 'string',
+            'format': 'date-time',
+            'description': ('The time when the PromotedLink was created, '
+                            'i.e. "2013-01-14T07:19:16Z"')
+        },
+        'url': {
+            'type': 'string',
+            'description': ('The URL visitors will be sent to upon clicking '
+                            'the PromotedLink, i.e. "http://www.engadget.com'
+                            '/2014/02/11/nasa-google-hangar-one/"')
+        },
+        'siteName': {
+            'type': 'string',
+            'description': ('The name of the publisher the PromotedLink '
+                            'URL points to, i.e. "cnn.com"')
+        },
+        'sectionName': {
+            'type': 'string',
+            'description': ('The section name of the site the PromotedLink '
+                            'URL points to, i.e. "Sports"')
+        },
+        'status': {
+            'type': 'string',
+            'description': ('The review status of the PromotedLink, '
+                            'i.e. "PENDING"')
+        },
+        'cachedImageUrl': {
+            'type': 'string',
+            'description': ('The URL of the PromotedLink\'s image, cached '
+                            'on Outbrain\'s servers, i.e. "http://images'
+                            '.outbrain.com/imageserver/v2/s/gtE/n/plcyz/abc'
+                            '/iGYzT/plcyz-f8A-158x110.jpg"')
+        },
+        'enabled': {
+            'type': 'boolean',
+            'description': ('Designates whether this PromotedLink will be '
+                            'served.')
+        },
+        'archived': {
+            'type': 'boolean',
+            'description': ('Designates whether this PromotedLink is '
+                            'archived.')
+        },
+        'documentLanguage': {
+            'type': 'string',
+            'description': ('The 2-letter code for the language of this '
+                            'PromotedLink (via the PromotedLinks URL), '
+                            'i.e. "EN"')
+        },
+        'cpc': {
+            'type': 'number',
+            'description': ('Cost per click, i.e. 0.58')
+        }
+    }
+}
+
+
 campaign = {
     'type': 'object',
     'properties': {
@@ -139,6 +224,72 @@ campaign_performance = {
             'key': True,
             'description': ('The campaign ID plus the start date (day) '
                             'for this record.')
+        },
+        'fromDate': {
+            'type': 'string',
+            'key': True,
+            'format': 'date',
+            'description': 'The start date for this record.'
+        },
+        'impressions': {
+            'type': 'number',
+            'description': ('Total number of PromotedLinks impressions across '
+                            'the entire query range.'),
+        },
+        'clicks': {
+            'type': 'number',
+            'description': ('Total PromotedLinks clicks across the entire '
+                            'query range.'),
+        },
+        'ctr': {
+            'type': 'number',
+            'description': ('The average CTR (Click Through Rate) percentage '
+                            'across the entire query range (clicks / '
+                            'impressions)/100.'),
+        },
+        'spend': {
+            'type': 'number',
+            'description': ('The total amount of money spent across the '
+                            'entire query range.'),
+        },
+        'ecpc': {
+            'type': 'number',
+            'description': ('The effective (calculated) average CPC (Cost Per '
+                            'Click) across the entire query range. '
+                            'Calculated as: (spend / clicks)'),
+        },
+        'conversions': {
+            'type': 'number',
+            'description': ('The total number of conversions calculated '
+                            'across the entire query range.')
+        },
+        'conversionRate': {
+            'type': 'number',
+            'description': ('The average rate of conversions per click '
+                            'percentage across the entire query range. '
+                            'Calculated as: (conversions / clicks)/100')
+        },
+        'cpa': {
+            'type': 'number',
+            'description': ('The average CPA (Cost Per Acquisition) '
+                            'calculated across the entire query range. '
+                            'Calculated as: (spend / conversions)')
+        }
+    }
+}
+
+link_performance = {
+    'type': 'object',
+    'properties': {
+        'campaignId': {
+            'type': 'string',
+            'key': True,
+            'description': ('The campaign ID for this record.')
+        },
+        'linkId': {
+            'type': 'string',
+            'key': True,
+            'description': ('The link ID for this record.')
         },
         'fromDate': {
             'type': 'string',
