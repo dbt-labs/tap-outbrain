@@ -19,5 +19,6 @@ setup(name='tap-outbrain',
       entry_points='''
           [console_scripts]
           tap-outbrain=tap_outbrain:main
-      '''
+      ''',
+      packages=['tap_outbrain']
 )
