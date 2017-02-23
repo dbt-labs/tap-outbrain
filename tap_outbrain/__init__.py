@@ -14,11 +14,11 @@ import time
 
 import backoff
 import requests
-import stitchstream
+import singer
 
 import tap_outbrain.schemas as schemas
 
-logger = stitchstream.get_logger()
+logger = singer.get_logger()
 
 BASE_URL = 'https://api.outbrain.com/amplify/v0.1'
 
@@ -221,13 +221,13 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
             parse_performance(result, extra_persist_fields)
             for result in response.json().get('results')]
 
-        stitchstream.write_records(table_name, performance)
+        singer.write_records(table_name, performance)
 
         last_record = performance[-1]
         new_from_date = last_record.get('fromDate')
 
         state[table_name][state_sub_id] = new_from_date
-        stitchstream.write_state(state)
+        singer.write_state(state)
 
         from_date = new_from_date
 
@@ -262,7 +262,7 @@ def sync_campaigns(state, access_token, account_id):
     campaigns = [parse_campaign(campaign) for campaign
                  in response.json().get('campaigns', [])]
 
-    stitchstream.write_records('campaigns', campaigns)
+    singer.write_records('campaigns', campaigns)
 
     logger.info('Done in {} sec.'.format(time.time() - start))
 
@@ -320,7 +320,7 @@ def sync_links(state, access_token, account_id, campaign_id):
         links = [parse_link(link) for link
                  in response.json().get('promotedLinks', [])]
 
-        stitchstream.write_records('links', links)
+        singer.write_records('links', links)
 
         total_count = response.json().get('totalCount')
         processed_count = processed_count + len(links)
@@ -375,13 +375,19 @@ def do_sync(args):
         logger.fatal("Failed to generate a new access token.")
         raise RuntimeError
 
-    stitchstream.write_schema('campaigns', schemas.campaign)
-    stitchstream.write_schema('campaign_performance',
-                              schemas.campaign_performance)
 
-    stitchstream.write_schema('links', schemas.link)
-    stitchstream.write_schema('link_performance',
-                              schemas.link_performance)
+    singer.write_schema('campaigns',
+                        schemas.campaign,
+                        key_properties=["id"])
+    singer.write_schema('campaign_performance',
+                        schemas.campaign_performance,
+                        key_properties=["campaignId", "fromDate"])
+    singer.write_schema('links',
+                        schemas.link,
+                        key_properties=["id"])
+    singer.write_schema('link_performance',
+                        schemas.link_performance,
+                        key_properties=["campaignId", "linkId", "fromDate"])
 
     sync_campaigns(state, access_token, account_id)
 

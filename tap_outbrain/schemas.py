@@ -3,7 +3,6 @@ link = {
     'properties': {
         'id': {
             'type': 'string',
-            'key': True,
             'description': ('ID of this PromotedLink, i.e. '
                             '"00f4b02153ee75f3c9dc4fc128ab041962"')
         },
@@ -88,7 +87,6 @@ campaign = {
     'properties': {
         'id': {
             'type': 'string',
-            'key': True,
             'description': 'Campaign ID'
         },
         'name': {
@@ -221,13 +219,11 @@ campaign_performance = {
     'properties': {
         'campaignId': {
             'type': 'string',
-            'key': True,
             'description': ('The campaign ID plus the start date (day) '
                             'for this record.')
         },
         'fromDate': {
             'type': 'string',
-            'key': True,
             'format': 'date',
             'description': 'The start date for this record.'
         },
@@ -283,17 +279,14 @@ link_performance = {
     'properties': {
         'campaignId': {
             'type': 'string',
-            'key': True,
             'description': ('The campaign ID for this record.')
         },
         'linkId': {
             'type': 'string',
-            'key': True,
             'description': ('The link ID for this record.')
         },
         'fromDate': {
             'type': 'string',
-            'key': True,
             'format': 'date',
             'description': 'The start date for this record.'
         },
