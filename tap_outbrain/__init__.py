@@ -345,25 +345,35 @@ def sync_links(state, access_token, account_id, campaign_id):
 
 
 def do_sync(args):
+    global DEFAULT_START_DATE
     state = DEFAULT_STATE
 
     with open(args.config) as config_file:
         config = json.load(config_file)
 
-    username = config.get('username')
-    password = config.get('password')
-    account_id = config.get('account_id')
+    if 'username' not in config:
+        missing_keys.append('username')
+    else:
+        username = config['username']
 
-    if username is None:
-        logger.fatal("Missing `username`.")
-        raise RuntimeError
+    if 'password' not in config:
+        missing_keys.append('password')
+    else:
+        password = config['password']
 
-    if password is None:
-        logger.fatal("Missing `password`.")
-        raise RuntimeError
+    if 'account_id' not in config:
+        missing_keys.append('account_id')
+    else:
+        account_id = config['account_id']
 
-    if account_id is None:
-        logger.fatal("Missing `account_id`.")
+    if 'start_date' not in config:
+        missing_keys.append('start_date')
+    else:
+        # only want the date
+        DEFAULT_START_DATE, _ = config['start_date'].split('T')
+
+    if missing_keys:
+        logger.fatal("Missing {}.".format(", ".join(missing_keys)))
         raise RuntimeError
 
     access_token = config.get('access_token')
