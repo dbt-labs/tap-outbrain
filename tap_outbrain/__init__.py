@@ -370,7 +370,7 @@ def do_sync(args):
         missing_keys.append('start_date')
     else:
         # only want the date
-        DEFAULT_START_DATE, _ = config['start_date'].split('T')
+        DEFAULT_START_DATE, _ = config['start_date'][:10]
 
     if missing_keys:
         logger.fatal("Missing {}.".format(", ".join(missing_keys)))
