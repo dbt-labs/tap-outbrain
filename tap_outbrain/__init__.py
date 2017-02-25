@@ -350,7 +350,7 @@ def do_sync(args):
 
     with open(args.config) as config_file:
         config = json.load(config_file)
-
+    missing_keys = []
     if 'username' not in config:
         missing_keys.append('username')
     else:
@@ -372,7 +372,7 @@ def do_sync(args):
         # only want the date
         DEFAULT_START_DATE = config['start_date'][:10]
 
-    if missing_keys:
+    if len(missing_keys) > 0:
         logger.fatal("Missing {}.".format(", ".join(missing_keys)))
         raise RuntimeError
 
