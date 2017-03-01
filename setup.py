@@ -11,9 +11,9 @@ setup(name='tap-outbrain',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_outbrain'],
       install_requires=[
-          'singer-python==0.1.0',
+          'singer-python==0.2.1',
           'backoff==1.3.2',
-          'requests==2.13.0',
+          'requests==2.12.4',
           'python-dateutil==2.6.0'
       ],
       entry_points='''
