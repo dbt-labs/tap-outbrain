@@ -12,7 +12,7 @@ RUN pip3 install --upgrade pip setuptools && \
 
 ADD . /usr/src/tap-outbrain
 
-RUN pip3 install -r requirements.txt
-RUN pip3 install persist-stitch==0.3.1
+RUN pip3 install --upgrade .
+RUN pip3 install target-stitch==0.7.3
 
-CMD [ "/bin/sh", "-c", "/usr/src/tap-outbrain/tap_outbrain.py -c /usr/src/tap-outbrain/config.json | persist-stitch sync -c /usr/src/tap-outbrain/persist.json" ]
+CMD [ "/bin/sh", "-c", "tap-outbrain -c /usr/src/tap-outbrain/config.json | target-stitch -c /usr/src/tap-outbrain/persist.json" ]
