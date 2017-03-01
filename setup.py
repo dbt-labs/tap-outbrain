@@ -3,17 +3,18 @@
 from setuptools import setup, find_packages
 import os.path
 
-Setup(name='tap-outbrain',
+setup(name='tap-outbrain',
       version='0.0.1',
-      description='Streams Outbrain data',
+      description='Singer.io tap for extracting data from the Outbrain API',
       author='Fishtown Analytics',
-      url='https://github.com/stitchstreams/tap-outbrain',
+      url='http://singer.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_outbrain'],
       install_requires=[
           'stitchstream-python==0.5.0',
           'backoff==1.3.2',
-          'requests==2.13.0'
+          'requests==2.13.0',
+          'python-dateutil==2.6.0'
       ],
       entry_points='''
           [console_scripts]
