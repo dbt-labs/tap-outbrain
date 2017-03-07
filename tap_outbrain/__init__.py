@@ -19,6 +19,7 @@ import singer
 import tap_outbrain.schemas as schemas
 
 logger = singer.get_logger()
+session = requests.Session()
 
 BASE_URL = 'https://api.outbrain.com/amplify/v0.1'
 
@@ -45,34 +46,26 @@ def giveup(error):
                       interval=30)
 def request(url, access_token, params={}):
     logger.info("Making request: GET {} {}".format(url, params))
+    headers = {'OB-TOKEN-V1': access_token}
 
-    try:
-        response = requests.get(
-            url,
-            headers={'OB-TOKEN-V1': access_token},
-            params=params)
-    except e:
-        logger.exception(e)
+    req = requests.Request('GET', url, headers=headers, params=params).prepare()
+    logger.info("GET {}".format(req.url))
+    resp = session.send(req)
 
-    logger.info("Got response code: {}".format(response.status_code))
+    if resp.status_code >= 400:
+        logger.error("GET {} [{} - {}]".format(req.url, resp.status_code, resp.content))
+        resp.raise_for_status()
 
-    response.raise_for_status()
-    return response
+    return resp
 
 
 def generate_token(username, password):
     logger.info("Generating new token using basic auth.")
 
-    encoded = base64.b64encode(bytes('{}:{}'.format(username, password),
-                                     'utf-8')) \
-                    .decode('utf-8')
-
-    response = requests.get(
-        '{}/login'.format(BASE_URL),
-        headers={'Authorization': 'Basic {}'.format(encoded)})
-    response.raise_for_status()
-
+    auth = requests.auth.HTTPBasicAuth(username, password)
+    response = requests.get('{}/login'.format(BASE_URL), auth=auth)
     logger.info("Got response code: {}".format(response.status_code))
+    response.raise_for_status()
 
     return response.json().get('OB-TOKEN-V1')
 
