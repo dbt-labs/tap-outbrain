@@ -47,6 +47,8 @@ def giveup(error):
 def request(url, access_token, params={}):
     logger.info("Making request: GET {} {}".format(url, params))
     headers = {'OB-TOKEN-V1': access_token}
+    if 'user_agent' in CONFIG:
+        headers['User-Agent'] = CONFIG['user_agent']
 
     req = requests.Request('GET', url, headers=headers, params=params).prepare()
     logger.info("GET {}".format(req.url))
