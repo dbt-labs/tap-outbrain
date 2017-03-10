@@ -22,6 +22,7 @@ logger = singer.get_logger()
 session = requests.Session()
 
 BASE_URL = 'https://api.outbrain.com/amplify/v0.1'
+CONFIG = {}
 
 DEFAULT_STATE = {
     'campaign_performance': {},
@@ -340,11 +341,13 @@ def sync_links(state, access_token, account_id, campaign_id):
 
 
 def do_sync(args):
-    global DEFAULT_START_DATE
+    global DEFAULT_START_DATE, CONFIG
     state = DEFAULT_STATE
 
     with open(args.config) as config_file:
         config = json.load(config_file)
+        CONFIG.update(config)
+
     missing_keys = []
     if 'username' not in config:
         missing_keys.append('username')
