@@ -1,0 +1,13 @@
+machine:
+  python:
+    version: 3.4.4
+  dependencies:
+    pip install pylint
+
+test:
+  post:
+    pylint tap_outbrain
+    
+
+
+      
