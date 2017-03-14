@@ -1,3 +1,4 @@
+#pylint: disable=invalid-name
 link = {
     'type': 'object',
     'properties': {
@@ -99,7 +100,7 @@ campaign = {
                             'in Live Status')
         },
         'onAirReason': {
-	    'type': 'string',
+            'type': 'string',
             'description': ('The reason for the campaign on air status, same '
                             'as onAirReason in Live Status')
         },
@@ -113,7 +114,7 @@ campaign = {
                             'details use Budget'),
             'properties': {
                 'id': {
-	            'type': 'string',
+                    'type': 'string',
                     'description': ('The id of this Budget, i.e. '
                                     '"00f4b02153ee75f3c9dc4fc128ab041962"')
                 },

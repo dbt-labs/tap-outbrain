@@ -1,13 +1,11 @@
 machine:
   python:
     version: 3.4.4
-  dependencies:
-    pip install pylint
+
+dependencies:
+  pre:
+    - pip install pylint
 
 test:
   post:
-    pylint tap_outbrain
-    
-
-
-      
+    - pylint tap_outbrain --disable missing-docstring,logging-format-interpolation,too-many-arguments,too-many-locals
