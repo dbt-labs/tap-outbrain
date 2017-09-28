@@ -364,7 +364,7 @@ def do_sync(args):
         # only want the date
         DEFAULT_START_DATE = config['start_date'][:10]
 
-    if len(missing_keys) > 0:
+    if missing_keys:
         LOGGER.fatal("Missing {}.".format(", ".join(missing_keys)))
         raise RuntimeError
 
