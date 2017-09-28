@@ -394,7 +394,7 @@ def do_sync(args):
     sync_campaigns(state, access_token, account_id)
 
 
-def main():
+def main_impl():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -405,6 +405,14 @@ def main():
     args = parser.parse_args()
 
     do_sync(args)
+
+
+def main():
+    try:
+        main_impl()
+    except Exception as exc:
+        LOGGER.critical(exc)
+        raise exc
 
 
 if __name__ == '__main__':
