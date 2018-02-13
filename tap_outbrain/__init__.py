@@ -16,6 +16,7 @@ import backoff
 import requests
 import singer
 import singer.requests
+from singer import utils
 
 import tap_outbrain.schemas as schemas
 
@@ -197,20 +198,22 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
         }
         params.update(extra_params)
 
-        last_request_start = time.time()
+        last_request_start = utils.now()
         response = request(
             '{}/reports/marketers/{}/periodic'.format(BASE_URL, account_id),
             access_token,
             params)
-        last_request_end = time.time()
+        last_request_end = utils.now()
 
-        LOGGER.info('Done in {} sec'.format(time.time() - last_request_start))
+        LOGGER.info('Done in {} sec'.format(
+            last_request_end.timestamp() - last_request_start.timestamp()))
 
         performance = [
             parse_performance(result, extra_persist_fields)
             for result in response.json().get('results')]
 
-        singer.write_records(table_name, performance)
+        for record in performance:
+            singer.write_record(table_name, record, time_extracted=last_request_end)
 
         last_record = performance[-1]
         new_from_date = last_record.get('fromDate')
@@ -221,8 +224,8 @@ def sync_performance(state, access_token, account_id, table_name, state_sub_id,
         from_date = new_from_date
 
         if last_request_start is not None and \
-           (time.time() - last_request_end) < 30:
-            to_sleep = 30 - (time.time() - last_request_end)
+           (time.time() - last_request_end.timestamp()) < 30:
+            to_sleep = 30 - (time.time() - last_request_end.timestamp())
             LOGGER.info(
                 'Limiting to 2 requests per minute. Sleeping {} sec '
                 'before making the next reporting request.'
@@ -243,17 +246,20 @@ def parse_campaign(campaign):
 def sync_campaigns(state, access_token, account_id):
     LOGGER.info('Syncing campaigns.')
 
-    start = time.time()
+    start = utils.now()
     response = request(
         '{}/marketers/{}/campaigns'.format(BASE_URL, account_id),
         access_token, {})
 
+    time_extracted = utils.now()
+
     campaigns = [parse_campaign(campaign) for campaign
                  in response.json().get('campaigns', [])]
 
-    singer.write_records('campaigns', campaigns)
+    for record in campaigns:
+        singer.write_record('campaigns', record, time_extracted=time_extracted)
 
-    LOGGER.info('Done in {} sec.'.format(time.time() - start))
+    LOGGER.info('Done in {} sec.'.format(time_extracted.timestamp() - start.timestamp()))
 
     campaigns_done = 0
 
@@ -298,7 +304,7 @@ def sync_links(state, access_token, account_id, campaign_id):
                     campaign_id,
                     processed_count))
 
-        start = time.time()
+        start = utils.now()
         response = request(
             '{}/campaigns/{}/promotedLinks'.format(BASE_URL, campaign_id),
             access_token, {
@@ -306,15 +312,17 @@ def sync_links(state, access_token, account_id, campaign_id):
                 'offset': processed_count
             })
 
+        time_extracted = utils.now()
+
         links = [parse_link(link) for link
                  in response.json().get('promotedLinks', [])]
-
-        singer.write_records('links', links)
 
         total_count = response.json().get('totalCount')
         processed_count = processed_count + len(links)
 
         for link in links:
+            singer.write_record('links', link, time_extracted=time_extracted)
+
             LOGGER.info(
                 'Syncing link performance for link {} of {}.'.format(
                     fully_synced_count,
@@ -326,7 +334,7 @@ def sync_links(state, access_token, account_id, campaign_id):
             fully_synced_count = fully_synced_count + 1
 
         LOGGER.info('Done in {} sec, processed {} of {} links.'
-                    .format(time.time() - start,
+                    .format(time_extracted.timestamp() - start.timestamp(),
                             processed_count,
                             total_count))
 
@@ -383,13 +391,15 @@ def do_sync(args):
                         key_properties=["id"])
     singer.write_schema('campaign_performance',
                         schemas.campaign_performance,
-                        key_properties=["campaignId", "fromDate"])
+                        key_properties=["campaignId", "fromDate"],
+                        bookmark_properties=["fromDate"])
     singer.write_schema('links',
                         schemas.link,
                         key_properties=["id"])
     singer.write_schema('link_performance',
                         schemas.link_performance,
-                        key_properties=["campaignId", "linkId", "fromDate"])
+                        key_properties=["campaignId", "linkId", "fromDate"],
+                        bookmark_properties=["fromDate"])
 
     sync_campaigns(state, access_token, account_id)
 
