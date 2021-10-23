@@ -1,4 +1,4 @@
-FROM alpine:3.4
+FROM alpine:3.11
 
 RUN mkdir -p /usr/src/tap-outbrain
 WORKDIR /usr/src/tap-outbrain
