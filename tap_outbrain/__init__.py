@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from decimal import Decimal
+from http import HTTPStatus
 
 import argparse
 import base64
@@ -13,6 +14,7 @@ import sys
 import time
 
 import backoff
+import platformdirs
 import requests
 import singer
 
@@ -28,6 +30,7 @@ DEFAULT_STATE = {
 }
 
 DEFAULT_START_DATE = '2016-08-01'
+ACCESS_TOKEN_EXPIRE_AFTER_DAYS = 30
 
 
 def giveup(error):
@@ -70,12 +73,42 @@ def generate_token(username, password):
     response = requests.get(
         '{}/login'.format(BASE_URL),
         headers={'Authorization': 'Basic {}'.format(encoded)})
+
+    if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
+        secs = int(response.headers["rate-limit-msec-left"]) / 1000
+        mins, r_secs = divmod(secs, 60)
+        hrs, r_mins = divmod(mins, 60)
+
+        logger.error(response.json())
+        logger.error("Remaining: %dh %dm %ds", hrs, r_mins, r_secs)
+
     response.raise_for_status()
 
     logger.info("Got response code: {}".format(response.status_code))
 
     return response.json().get('OB-TOKEN-V1')
 
+def get_token(username, password):
+    cache_dir = platformdirs.user_cache_path("tap-outbrain", ensure_exists=True)
+    access_token_file = cache_dir / "access_token"
+
+    if access_token_file.exists():
+        now = datetime.datetime.now()
+        modified = datetime.datetime.fromtimestamp(access_token_file.stat().st_mtime)
+
+        if now - modified < datetime.timedelta(days=ACCESS_TOKEN_EXPIRE_AFTER_DAYS):
+            logger.info("Using access token from %s", access_token_file)
+            return access_token_file.read_text()
+
+        logger.info(
+            "Cached access token modified more than %d days ago - assuming expired",
+            ACCESS_TOKEN_EXPIRE_AFTER_DAYS,
+        )
+
+    access_token = generate_token(username, password)
+    access_token_file.write_text(access_token)
+
+    return access_token
 
 def parse_datetime(datetime):
     dt = dateutil.parser.parse(datetime)
@@ -379,7 +412,7 @@ def do_sync(args):
     access_token = config.get('access_token')
 
     if access_token is None:
-        access_token = generate_token(username, password)
+        access_token = get_token(username, password)
 
     if access_token is None:
         logger.fatal("Failed to generate a new access token.")
