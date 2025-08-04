@@ -361,10 +361,10 @@ def do_sync(args):
     else:
         password = config['password']
 
-    if 'account_id' not in config:
-        missing_keys.append('account_id')
+    if 'account_ids' not in config and 'account_id' not in config:
+        missing_keys.append('account_ids')
     else:
-        account_id = config['account_id']
+        account_ids = config.get('account_ids') or [config['account_id']]
 
     if 'start_date' not in config:
         missing_keys.append('start_date')
@@ -399,7 +399,8 @@ def do_sync(args):
                         schemas.link_performance,
                         key_properties=["campaignId", "linkId", "fromDate"])
 
-    sync_campaigns(state, access_token, account_id)
+    for account_id in account_ids:
+        sync_campaigns(state, access_token, account_id)
 
 
 def main():
