@@ -2,7 +2,6 @@
 
 from decimal import Decimal
 
-import argparse
 import base64
 import copy
 import datetime
@@ -16,7 +15,7 @@ import backoff
 import requests
 import singer
 
-import tap_outbrain.schemas as schemas
+from tap_outbrain.streams import STREAMS
 
 logger = singer.get_logger()
 
@@ -344,12 +343,15 @@ def sync_links(state, access_token, account_id, campaign_id):
     logger.info('Done syncing links for campaign {}.'.format(campaign_id))
 
 
+def do_discover():
+    catalog = {"streams": STREAMS}
+    return print(json.dumps(catalog, indent=2))
+
 def do_sync(args):
     global DEFAULT_START_DATE
     state = DEFAULT_STATE
 
-    with open(args.config) as config_file:
-        config = json.load(config_file)
+    config = args.config
     missing_keys = []
     if 'username' not in config:
         missing_keys.append('username')
@@ -386,31 +388,18 @@ def do_sync(args):
         raise RuntimeError
 
 
-    singer.write_schema('campaigns',
-                        schemas.campaign,
-                        key_properties=["id"])
-    singer.write_schema('campaign_performance',
-                        schemas.campaign_performance,
-                        key_properties=["campaignId", "fromDate"])
-    singer.write_schema('links',
-                        schemas.link,
-                        key_properties=["id"])
-    singer.write_schema('link_performance',
-                        schemas.link_performance,
-                        key_properties=["campaignId", "linkId", "fromDate"])
+    for stream in STREAMS:
+        singer.write_schema(stream["tap_stream_id"], stream["schema"], stream["key_properties"])
 
     sync_campaigns(state, access_token, account_id)
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    args = singer.utils.parse_args([])
 
-    parser.add_argument(
-        '-c', '--config', help='Config file', required=True)
-    parser.add_argument(
-        '-s', '--state', help='State file')
-
-    args = parser.parse_args()
+    if args.discover:
+        do_discover()
+        return
 
     do_sync(args)
 
