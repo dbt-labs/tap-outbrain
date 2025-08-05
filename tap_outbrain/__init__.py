@@ -27,6 +27,7 @@ DEFAULT_STATE = {
 }
 
 DEFAULT_START_DATE = '2016-08-01'
+REQUIRED_CONFIG_KEYS = ["username", "password", "account_id", "start_date"]
 
 
 def giveup(error):
@@ -352,31 +353,12 @@ def do_sync(args):
     state = DEFAULT_STATE
 
     config = args.config
-    missing_keys = []
-    if 'username' not in config:
-        missing_keys.append('username')
-    else:
-        username = config['username']
+    username = config['username']
+    password = config['password']
+    account_id = config['account_id']
 
-    if 'password' not in config:
-        missing_keys.append('password')
-    else:
-        password = config['password']
-
-    if 'account_id' not in config:
-        missing_keys.append('account_id')
-    else:
-        account_id = config['account_id']
-
-    if 'start_date' not in config:
-        missing_keys.append('start_date')
-    else:
-        # only want the date
-        DEFAULT_START_DATE = config['start_date'][:10]
-
-    if len(missing_keys) > 0:
-        logger.fatal("Missing {}.".format(", ".join(missing_keys)))
-        raise RuntimeError
+    # only want the date
+    DEFAULT_START_DATE = config['start_date'][:10]
 
     access_token = config.get('access_token')
 
@@ -395,7 +377,7 @@ def do_sync(args):
 
 
 def main():
-    args = singer.utils.parse_args([])
+    args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
     if args.discover:
         do_discover()
