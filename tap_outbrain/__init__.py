@@ -377,7 +377,10 @@ def do_sync(args):
 
 
 def main():
-    args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
+    args = singer.utils.parse_args([])
+
+    if not args.discover:
+        singer.utils.check_config(args.config, REQUIRED_CONFIG_KEYS)
 
     if args.discover:
         do_discover()
