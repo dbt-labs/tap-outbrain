@@ -344,15 +344,14 @@ def sync_links(state, access_token, account_id, campaign_id):
     logger.info('Done syncing links for campaign {}.'.format(campaign_id))
 
 
-def do_discover():
+def discover():
     catalog = {"streams": STREAMS}
-    return print(json.dumps(catalog, indent=2))
+    return singer.Catalog.from_dict(catalog)
 
-def do_sync(args):
+def do_sync(config, catalog: singer.Catalog):
     global DEFAULT_START_DATE
     state = DEFAULT_STATE
 
-    config = args.config
     username = config['username']
     password = config['password']
     account_id = config['account_id']
@@ -370,8 +369,8 @@ def do_sync(args):
         raise RuntimeError
 
 
-    for stream in STREAMS:
-        singer.write_schema(stream["tap_stream_id"], stream["schema"], stream["key_properties"])
+    for stream in catalog.streams:
+        singer.write_schema(stream.tap_stream_id, stream.schema.to_dict(), stream.key_properties)
 
     sync_campaigns(state, access_token, account_id)
 
@@ -382,11 +381,17 @@ def main():
     if not args.discover:
         singer.utils.check_config(args.config, REQUIRED_CONFIG_KEYS)
 
-    if args.discover:
-        do_discover()
-        return
 
-    do_sync(args)
+    if not args.catalog or args.discover:
+        catalog = discover()
+
+        if args.discover:
+            print(json.dumps(catalog.to_dict(), indent=2))
+            return
+    else:
+        catalog = args.catalog
+
+    do_sync(args.config, catalog)
 
 
 if __name__ == '__main__':
