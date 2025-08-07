@@ -1,13 +1,13 @@
 from tap_outbrain import schemas
 
-link = {
-    "tap_stream_id": "link",
+links = {
+    "tap_stream_id": "links",
     "key_properties": ["id"],
     "schema": schemas.link,
 }
 
-campaign = {
-    "tap_stream_id": "campaign",
+campaigns = {
+    "tap_stream_id": "campaigns",
     "key_properties": ["id"],
     "schema": schemas.campaign,
 }
@@ -26,8 +26,8 @@ link_performance = {
 }
 
 STREAMS = (
-    link,
-    campaign,
+    links,
+    campaigns,
     campaign_performance,
     link_performance,
 )
