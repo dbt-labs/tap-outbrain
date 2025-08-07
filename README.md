@@ -1,3 +1,7 @@
+DEPRECATED -- This repository is no longer actively maintained.
+
+---
+
 # tap-outbrain
 
 Author: Connor McArthur (connor@fishtownanalytics.com)
